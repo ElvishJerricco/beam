@@ -9,8 +9,11 @@ import Database.Beam.Backend.SQL.SQL2003
 import Database.Beam.Schema.Tables
 
 import Database.Beam.Migrate.Types.Predicates
+import Database.Beam.Migrate.SQL.Types
 import Database.Beam.Migrate.SQL.SQL92
 import Database.Beam.Migrate.Checks
+
+import Database.Beam.Haskell.Syntax
 
 import Data.Proxy
 import Data.Text (Text)
@@ -44,6 +47,7 @@ instance ( HasDefaultSqlDataType (Sql92DdlCommandDataTypeSyntax syntax) haskTy
 
   gDefaultTblSettingsChecks _ _ embedded (K1 (TableField nm)) =
     nullableConstraint nm (Proxy @(NullableStatus haskTy)) (Proxy @(Sql92DdlCommandColumnSchemaSyntax syntax)) ++
+<<<<<<< HEAD
     defaultSqlDataTypeConstraints (Proxy @haskTy) (Proxy @(Sql92DdlCommandColumnSchemaSyntax syntax)) nm embedded ++
     [ TableCheck (\tblNm -> p (TableHasColumn tblNm nm (defaultSqlDataType (Proxy @haskTy) embedded) :: TableHasColumn (Sql92DdlCommandColumnSchemaSyntax syntax))) ]
 
@@ -54,6 +58,11 @@ instance ( Generic (embeddedTbl (TableField tbl))
 
   gDefaultTblSettingsChecks syntax _ _   (K1 embeddedTbl) =
     gDefaultTblSettingsChecks syntax (Proxy :: Proxy (Rep (embeddedTbl Identity))) True (from embeddedTbl)
+=======
+    [ TableCheck (\tblNm -> p (let DataType sqlTy mkHsTy = defaultSqlDataType (Proxy @haskTy)
+                                in TableHasColumn tblNm nm sqlTy (mkHsTy tblNm nm)
+                                   :: TableHasColumn (Sql92DdlCommandColumnSchemaSyntax syntax))) ]
+>>>>>>> Move beam migrate CLI out
 
 -- * Nullability check
 
@@ -79,6 +88,7 @@ class IsSql92ColumnSchemaSyntax columnSchemaSyntax => HasDefaultSqlDataTypeConst
   defaultSqlDataTypeConstraints _ _ _ _ = []
 
 class IsSql92DataTypeSyntax dataTypeSyntax => HasDefaultSqlDataType dataTypeSyntax ty where
+<<<<<<< HEAD
   defaultSqlDataType :: Proxy ty -> Bool {-^ Embedded -} -> dataTypeSyntax
 
 instance (IsSql92DataTypeSyntax dataTypeSyntax, HasDefaultSqlDataType dataTypeSyntax ty) =>
@@ -94,10 +104,23 @@ instance (IsSql92DataTypeSyntax dataTypeSyntax, HasDefaultSqlDataType dataTypeSy
 instance (IsSql92ColumnSchemaSyntax columnSchemaSyntax, HasDefaultSqlDataTypeConstraints columnSchemaSyntax ty) =>
   HasDefaultSqlDataTypeConstraints columnSchemaSyntax (Maybe ty) where
   defaultSqlDataTypeConstraints _ = defaultSqlDataTypeConstraints (Proxy @ty)
+=======
+  defaultSqlDataType :: Proxy ty -> DataType dataTypeSyntax ty
+  defaultHaskellDataType :: Proxy ty -> Proxy dataTypeSyntax -> Text -> Text -> HaskellSyntax
+
+instance (IsSql92DataTypeSyntax dataTypeSyntax, HasDefaultSqlDataType dataTypeSyntax ty) =>
+  HasDefaultSqlDataType dataTypeSyntax (Auto ty) where
+  defaultSqlDataType _ = autoType (defaultSqlDataType (Proxy @ty))
+
+instance (IsSql92DataTypeSyntax dataTypeSyntax, HasDefaultSqlDataType dataTypeSyntax ty) =>
+  HasDefaultSqlDataType dataTypeSyntax (Maybe ty) where
+  defaultSqlDataType _ = maybeType (defaultSqlDataType (Proxy @ty))
+>>>>>>> Move beam migrate CLI out
 
 -- TODO Not sure if individual databases will want to customize these types
 
 instance IsSql92DataTypeSyntax dataTypeSyntax => HasDefaultSqlDataType dataTypeSyntax Int where
+<<<<<<< HEAD
   defaultSqlDataType _ _ = intType
 instance IsSql92ColumnSchemaSyntax columnSchemaSyntax => HasDefaultSqlDataTypeConstraints columnSchemaSyntax Int
 instance IsSql92DataTypeSyntax dataTypeSyntax => HasDefaultSqlDataType dataTypeSyntax Int32 where
@@ -134,3 +157,19 @@ instance IsSql92ColumnSchemaSyntax columnSchemaSyntax => HasDefaultSqlDataTypeCo
 type Sql92HasDefaultDataType syntax ty =
   ( HasDefaultSqlDataType (Sql92DdlCommandDataTypeSyntax syntax) ty
   , HasDefaultSqlDataTypeConstraints (Sql92DdlCommandColumnSchemaSyntax syntax) ty )
+=======
+  defaultSqlDataType _ = int
+instance IsSql92DataTypeSyntax dataTypeSyntax => HasDefaultSqlDataType dataTypeSyntax Int32 where
+  defaultSqlDataType _ = int
+instance IsSql92DataTypeSyntax dataTypeSyntax => HasDefaultSqlDataType dataTypeSyntax Int16 where
+  defaultSqlDataType _ = int
+
+instance IsSql92DataTypeSyntax dataTypeSyntax => HasDefaultSqlDataType dataTypeSyntax Text where
+  defaultSqlDataType _ = varchar Nothing
+
+instance IsSql92DataTypeSyntax dataTypeSyntax => HasDefaultSqlDataType dataTypeSyntax Double where
+  defaultSqlDataType _ = double
+
+instance IsSql92DataTypeSyntax dataTypeSyntax => HasDefaultSqlDataType dataTypeSyntax Scientific where
+  defaultSqlDataType _ = numeric (Just (20, Just 10))
+>>>>>>> Move beam migrate CLI out
