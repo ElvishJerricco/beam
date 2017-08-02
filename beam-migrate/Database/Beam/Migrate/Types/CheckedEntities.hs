@@ -42,12 +42,12 @@ unCheckDatabase :: forall be db. Database db => CheckedDatabaseSettings be db ->
 unCheckDatabase db = runIdentity $ zipTables (Proxy @be) (\(CheckedDatabaseEntity x _) _ -> pure $ DatabaseEntity (unCheck x)) db db
 
 collectChecks :: forall be db. Database db => CheckedDatabaseSettings be db -> [ SomeDatabasePredicate ]
-collectChecks db = let x :: CheckedDatabaseSettings be db
-                       (x, a) = runWriter $ zipTables (Proxy @be) 
-                                  (\(CheckedDatabaseEntity entity cs :: CheckedDatabaseEntity be db entityType) b ->
-                                     do tell (collectEntityChecks entity)
-                                        tell cs
-                                        pure b) db db
+collectChecks db = let (_ :: CheckedDatabaseSettings be db, a) =
+                         runWriter $ zipTables (Proxy @be)
+                           (\(CheckedDatabaseEntity entity cs :: CheckedDatabaseEntity be db entityType) b ->
+                              do tell (collectEntityChecks entity)
+                                 tell cs
+                                 pure b) db db
                    in a
 
 instance IsCheckedDatabaseEntity be (DomainTypeEntity ty) where
@@ -78,8 +78,8 @@ instance IsCheckedDatabaseEntity be (TableEntity tbl) where
     map (\(TableCheck mkCheck) -> mkCheck tbl) tblChecks
   checkedDbEntityAuto syntax tblTypeName =
     let tbl'@(DatabaseTable _ tblSettings) = dbEntityAuto tblTypeName
-        pk = allBeamValues (\(Columnar' (TableField x)) -> x) (primaryKey tblSettings)
+        pk' = allBeamValues (\(Columnar' (TableField x)) -> x) (primaryKey tblSettings)
     in CheckedDatabaseTable tbl' ( TableCheck (\tblName -> SomeDatabasePredicate (TableExistsPredicate tblName))
-                                 : TableCheck (\tblName -> SomeDatabasePredicate (TableHasPrimaryKey tblName pk))
+                                 : TableCheck (\tblName -> SomeDatabasePredicate (TableHasPrimaryKey tblName pk'))
                                  : gDefaultTblSettingsChecks syntax (Proxy @(Rep (tbl Identity))) False (from tblSettings) )
 
